@@ -7,7 +7,7 @@ if ! [ -f commit-list ]; then
     exit 1
 fi
 
-source config.sh
+source ./config.sh
 
 mkdir -p commits pulls reviews
 rm -f commits/* pulls/* reviews/*

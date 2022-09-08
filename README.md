@@ -42,7 +42,15 @@ The scripts require that you have the following tools installed:
 -   The GitHub command-line interface, `gh`. It might be possible to
     do things directly with `curl` or `wget`, but `gh` handles
     authentication and maybe some other things, so I didn't try too
-    hard to avoid it.
+    hard to see if we could avoid it.
+    
+    Make sure you've authenticated yourself:
+    
+        $ gh auth status
+        github.com
+          ✓ Logged in to github.com as jimblandy (oauth_token)
+          ✓ Git operations for github.com configured to use ssh protocol.
+          ✓ Token: *******************
   
     The `gh` tool is packaged by Fedora.
 
@@ -60,16 +68,16 @@ Here is a command to install the prerequisites on Fedora:
 Start with an empty directory, which will hold the data fetched from
 GitHub and various other intermediate results:
 
-    $ mkdir vet-wgpu
+    $ mkdir vet-myproj
 
 We'll call the full path to this directory `$work`. These scripts
 assume that `$work` is the current directory when they are invoked.
 
-    $ cd vet-wgpu
+    $ cd vet-myproj
 
-Eventually, we will have a tree like this:
+When the whole process is complete, we will have a tree like this:
 
-    vet-wgpu
+    vet-myproj
     ├── config.sh
     ├── trusted.json
     ├── commit-list
@@ -106,8 +114,9 @@ In this tree:
   as trusted authors and reviewers.
 
 - The `commit-list` file is a list of git long hashes of the commits
-  we need to review. This can simply be the output from `git
-  rev-list`.
+  we need to review. These are up to you; it could simply be the
+  output from `git rev-list OLD..NEW`. But it should contain long
+  commit SHAs, not short hashes.
 
 - The `commits`, `pulls` and `reviews` subdirectories hold the raw
   results of individual queries from the GitHub RUST API, produced by
@@ -198,7 +207,6 @@ script to write the `mergers-and-approvers.tsv` file, which can be
 imported into Google Sheets or something like that.
 
     $ sh $bin/mergers-and-approvers
-    $ cat mergers-and-approvers.tsv
     $ cat mergers-and-approvers.tsv 
     1933	e2d688088a8e900e22da348cdc7ba0655394b498	expenses	JCapucho	JCapucho	
     1989	27d38aae33fdbfa72197847038cb470720594cb1	teoxoy	jimblandy	jimblandy	jimblandy
