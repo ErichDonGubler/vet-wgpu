@@ -30,7 +30,7 @@ There are generally three phases to producing a vetting table:
     together with the information needed to decide which of them require
     an audit.
 
-Each of these are described in more detail below.
+Each of these phases is described in more detail below.
 
 ## Prerequisites
 
@@ -186,7 +186,7 @@ given directory.
 
 To fetch the list of pulls and reviews associated with each commit:
 
-    $ sh $bin/fetch-commits.sh
+    $ sh $scripts/fetch-commits.sh
 
 This is the only step that contacts GitHub, and all it does is file
 away the data retrieved with minimal processing: just finding the pull
@@ -206,7 +206,7 @@ Once the data has been retrieved, run the `mergers-and-approvers.sh`
 script to write the `mergers-and-approvers.tsv` file, which can be
 imported into Google Sheets or something like that.
 
-    $ sh $bin/mergers-and-approvers
+    $ sh $scripts/mergers-and-approvers
     $ cat mergers-and-approvers.tsv 
     1933	e2d688088a8e900e22da348cdc7ba0655394b498	expenses	JCapucho	JCapucho	
     1989	27d38aae33fdbfa72197847038cb470720594cb1	teoxoy	jimblandy	jimblandy	jimblandy
