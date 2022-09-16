@@ -89,7 +89,7 @@ jq --slurpfile pulls pulls.json                         \
             approvers: [ $pull_numbers[] | tostring | $reviews[.].reviews[] | .user.login ] | unique,
             mergers: [ $pull_numbers[] | tostring | $pulls[.].merged_by.login ] | unique,
           }
-        | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | debug | unique ))
+        | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | unique ))
       )
     | sort_by(.pull)[]
     | "\(.pull)\t\(.sha)\t\(.author)\t\(.approvers | join(","))\t\(.mergers | join(","))\t\(.vetters | join(","))"

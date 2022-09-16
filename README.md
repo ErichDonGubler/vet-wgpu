@@ -52,8 +52,6 @@ The scripts require that you have the following tools installed:
           ✓ Git operations for github.com configured to use ssh protocol.
           ✓ Token: *******************
   
-    The `gh` tool is packaged by Fedora.
-
 -   The `jq` JSON processing tool. This is what we use to combine the
     data we get from the GitHub REST API into the form we need. If you
     don't know `jq`, definitely check it out the next time you have
@@ -81,11 +79,12 @@ When the whole process is complete, we will have a tree like this:
     ├── repo.sh
     ├── trusted.json
     ├── commit-list
+    ├── commit-pulls-overrides.json
+    ├── commits.json
     ├── commit-pulls.json
-    ├── mergers-and-approvers.tsv
-    ├── pull-list.json
     ├── pulls.json
     ├── reviews.json
+    ├── mergers-and-approvers.tsv
     ├── commits
     │   ├── 006bbbc94d49b2920188cbdadf97802d064494be
     │   ├── 01628a1fad05708ebc3d5e701736915b39ad37ae
@@ -121,44 +120,50 @@ In this tree:
 
 - The `commit-list` file is a list of git long hashes of the commits
   we need to review. These are up to you; it could simply be the
-  output from `git rev-list OLD..NEW`. But it should contain long
-  commit SHAs, not short hashes.
+  output from `git rev-list OLD..NEW`. It must contain long commit
+  SHAs, not short hashes.
+  
+- The `commit-pulls-overrides.json` file holds optional manual edits
+  to the mapping from commits to pull requests. We explain why this
+  might be necessary below.
 
-- The `commits`, `pulls` and `reviews` subdirectories hold the raw
-  results of individual queries from the GitHub RUST API, produced by
-  the `github-fetch.sh` script, based on `commit-list`. Hopefully, you
-  can retrieve these once and then leave them alone, to keep GitHub
-  from rate-limiting you.
+- The remaining `.json` files hold combined intermediate results used
+  by the `mergers-and-approvers.sh` script.
 
-- The `.json` files hold combined intermediate results used by the
-  `mergers-and-approvers.sh` script.
+- The `commits`, `commit-pulls`, `pulls` and `reviews` subdirectories
+  hold the raw results of individual queries from the GitHub RUST API,
+  produced by the `fetch-commits.sh` and `fetch-pulls.sh` scripts,
+  based on `commit-list` and `commit-pulls-overrides.json`. Hopefully,
+  you can retrieve these once and then leave them alone, to keep
+  GitHub from rate-limiting you.
 
 - The `mergers-and-approvers.tsv` file is the final result, ready for
   importing into Google Sheets. This is produced by
   `mergers-and-approvers.sh`.
 
-## Creating the config file
+## Creating the repository file
 
 The scripts that retrieve data from GitHub need to know which
 repository to operate on. For this, they consult the file
 `$work/repo.sh`, whose contents look like this:
 
-    owner=gfx-rs
     repo=naga
+    owner=gfx-rs
     
-These specify the GitHub owner and their repository the scripts should
-access. This file is `source`-ed by each script when it starts.
+These specify the GitHub repository that the scripts should access,
+and the repository's owner. This file is `source`-ed by each script
+when it starts.
 
 ## Creating the trusted reviewers table
 
 The point of this exercise is to identify commits that we don't need
 to audit because they were either authored or reviewed by people we
-trust to apply the appropriate standards of review. The `trusted.json`
-file identifies who these trusted people are.
+trust to apply the appropriate standards of review. The file
+`$work/trusted.json` identifies who these trusted people are.
 
 The file should contain a JSON object whose keys are the GitHub
-usernames of trusted authors/reviewers. The values of the keys don't
-matter. For example:
+usernames of trusted authors/reviewers. The values associated with the
+keys don't matter. For example:
 
     {
       "jimblandy": true,
@@ -166,24 +171,42 @@ matter. For example:
       "nical": true
     }
 
+This says that GitHub users `jimblandy`, `kvark`, and `nical` are
+trusted reviewers.
+
 ## Generating the commit list
 
-Although `cargo vet` operates in terms of crate versions, the auditing
-process described here works in terms of git commits - and there is no
-straightforward relationship between crate versions and git commits.
-If the crate's maintainers happen to have placed a tag on the commit
-from which they published the crate, that's great, but there's no
-automation that ensures that that actually happens reliably. So it's
-up to you to identify an appropriate range of commits, and check that
-it corresponds to what was actually published.
+To establish the set of commits to consider for auditing, you must
+create the file `$work/commit-list`, holding a series of full-length
+git commit SHAs, one per line. These commits must cover all the
+changes included in the version or delta you want to audit for `cargo
+vet`.
 
-In this example, assume that we want to audit commits reachable from
-`gfx-rs/v0.13` that are not reachable from `gfx-rs/v0.12`, which has
-already been audited. If `$source` is a git checkout of the project
-we're auditing, we would generate the `commit-list` file with a
-command like:
+Unfortunately, this list of commits can't be generated mechanically.
+We need a list of commits, but `cargo vet` operates in terms of crate
+versions - and there is no straightforward relationship between the
+two. If the crate's maintainers happen to tag the commit from which
+they published the crate, that's great, but there's no automation to
+ensure that anything like that happens reliably. So it's up to you to
+identify an appropriate range of commits, and check that its endpoints
+correspond to the crate texts actually published.
 
-    $ git -C $source gfx-rs/v0.12..gfx-rs/v0.13 > commit-list
+You can retrieve the published source of a crate from a URL of the form:
+
+    https://static.crates.io/crates/{name}/{name}-{version}.crate
+    
+This gives you a gzipped tarball which you can unpack and compare to
+some specific git commit. What a pain. Note that publishing a crate
+adjusts its `Cargo.toml` file, so differences in that file are
+expected.
+
+In this example, assume that we have done the legwork necessary to
+determine that want to audit commits reachable from `gfx-rs/v0.13`
+that are not reachable from `gfx-rs/v0.12`, which has already been
+audited. If `$source` is a git checkout of the project we're auditing,
+we could generate the `commit-list` file like this:
+
+    $ git -C $source gfx-rs/v0.12..gfx-rs/v0.13 > $work/commit-list
 
 The `-C` option just tells git to behave as if it were started in the
 given directory.
@@ -196,14 +219,16 @@ To fetch the list of pulls and reviews associated with each commit:
 
 This is the first step that contacts GitHub, and all it does is file
 away the data retrieved with minimal processing (just pretty-printing
-the JSON). All the steps that hit the network are separated out into
-their own scripts, so that the steps that do interesting processing
-can be iterated on without constantly hitting the network.
+the JSON). All the steps in these instructions that hit the network
+are separated out into their own scripts, so that the steps that do
+interesting processing can be iterated on without constantly hitting
+the network.
 
 The `fetch-commits.sh` script sleeps a bit between requests to avoid
 getting rate-limited. I have never actually had a problem with this,
 but sometimes we have hundreds of commits to retrieve, and it just
-seems polite.
+seems polite. Feel free to overclock it if you want to live
+dangerously.
 
 ## Finding pull requests for each commit
 
@@ -271,7 +296,7 @@ find the pull request associated with a given commit in some cases.
 GitHub seems to return a response like the above when a PR is squashed
 and rebased via the web interface before being landed. See
 [#1](https://github.com/jimblandy/vet-wgpu/issues/1) for a bit more
-detail.
+detail. (This may have been fixed recently.)
 
 In the sample `$work/commit-pulls.json` file shown above, you can see
 that while five of the commits have an associated pull request,
