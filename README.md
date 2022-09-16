@@ -1,4 +1,4 @@
-# Querying commits for `cargo vet` audits
+# Selecting commits for `cargo vet` audits
 
 When auditing the changes between two versions of a crate for `cargo
 vet`, in practice it is usually not necessary to examine every commit:
@@ -78,15 +78,21 @@ assume that `$work` is the current directory when they are invoked.
 When the whole process is complete, we will have a tree like this:
 
     vet-myproj
-    ├── config.sh
+    ├── repo.sh
     ├── trusted.json
     ├── commit-list
-    ├── commits.json
+    ├── commit-pulls.json
     ├── mergers-and-approvers.tsv
     ├── pull-list.json
     ├── pulls.json
     ├── reviews.json
     ├── commits
+    │   ├── 006bbbc94d49b2920188cbdadf97802d064494be
+    │   ├── 01628a1fad05708ebc3d5e701736915b39ad37ae
+    │   ..
+    │   ├── fd954a2bd6e19e2954495e03ca171d4a1264a2d5
+    │   └── ff07716f79fb1d84a895bca9d0534947f024294f
+    ├── commit-pulls
     │   ├── 006bbbc94d49b2920188cbdadf97802d064494be
     │   ├── 01628a1fad05708ebc3d5e701736915b39ad37ae
     │   ..
@@ -107,7 +113,7 @@ When the whole process is complete, we will have a tree like this:
 
 In this tree:
 
-- The `config.sh` file indicates which GitHub repository we're working
+- The `repo.sh` file indicates which GitHub repository we're working
   with.
 
 - The `trusted.json` file indicates which contributors we're treating
@@ -135,7 +141,7 @@ In this tree:
 
 The scripts that retrieve data from GitHub need to know which
 repository to operate on. For this, they consult the file
-`$work/config.sh`, whose contents look like this:
+`$work/repo.sh`, whose contents look like this:
 
     owner=gfx-rs
     repo=naga
@@ -188,17 +194,127 @@ To fetch the list of pulls and reviews associated with each commit:
 
     $ sh $scripts/fetch-commits.sh
 
-This is the only step that contacts GitHub, and all it does is file
-away the data retrieved with minimal processing: just finding the pull
-numbers associated with each commit, and pretty-printing the JSON. All
-the interesting processing is handled by later steps, so that as much
-of the process as possible can be iterated on without constantly
-hitting the network.
+This is the first step that contacts GitHub, and all it does is file
+away the data retrieved with minimal processing (just pretty-printing
+the JSON). All the steps that hit the network are separated out into
+their own scripts, so that the steps that do interesting processing
+can be iterated on without constantly hitting the network.
 
 The `fetch-commits.sh` script sleeps a bit between requests to avoid
 getting rate-limited. I have never actually had a problem with this,
 but sometimes we have hundreds of commits to retrieve, and it just
 seems polite.
+
+## Finding pull requests for each commit
+
+To find the set of pull requests (usually only one) associated with
+each commit, run the `$scripts/make-commit-pulls.sh` script:
+
+    $ sh $scripts/make-commit-pulls.sh
+
+This creates the file `$work/commit-pulls.json`, which is a JSON
+object mapping commit SHAs to lists of pull request numbers, like
+this:
+
+    {
+      "06ae90527dcede1a98d6f15fa7c440f0eab5d0ba": {
+        "pulls": [
+          1998
+        ]
+      },
+      "27d38aae33fdbfa72197847038cb470720594cb1": {
+        "pulls": [
+          1989
+        ]
+      },
+      "67ef37ae991f72f06a58774c3866d716d1c9a9c1": {
+        "pulls": [
+          1993
+        ]
+      },
+      "7555df952e45969d82ac260caa49a1b7beacfe7e": {
+        "pulls": []
+      },
+      "9b7fe8803db1c8bb21ee47bd6691f0cd72ef28cc": {
+        "pulls": []
+      },
+      "b746e0a4209133c0654d0c8959db97b45cf9358a": {
+        "pulls": [
+          1995
+        ]
+      },
+      "e2d688088a8e900e22da348cdc7ba0655394b498": {
+        "pulls": [
+          1933
+        ]
+      }
+    }
+
+There may be some commits that have no associated pull requests. If
+so, the script lists them. The next section explains how to deal with
+this.
+
+### Commits without pull requests
+
+Some commits are not associated with any pull request - say, if
+someone simply pushes a commit directly to the repository. This
+results in a file in the `commit-pulls` directory containing only an
+empty JSON array:
+
+    []
+    
+This naturally leads to an empty list of pull requests for that commit
+SHA in `$work/commit-pulls.json` as well.
+
+However, the GitHub REST API also has a bug which makes it unable to
+find the pull request associated with a given commit in some cases.
+GitHub seems to return a response like the above when a PR is squashed
+and rebased via the web interface before being landed. See
+[#1](https://github.com/jimblandy/vet-wgpu/issues/1) for a bit more
+detail.
+
+In the sample `$work/commit-pulls.json` file shown above, you can see
+that while five of the commits have an associated pull request,
+`7555df9` and `9b7fe88` do not. To see which commits have no pull
+requests in your own data, use a query like this:
+
+    $ jq 'map_values(select(.pulls == []))' commit-pulls.json
+    {
+      "7555df952e45969d82ac260caa49a1b7beacfe7e": {
+        "pulls": []
+      },
+      "9b7fe8803db1c8bb21ee47bd6691f0cd72ef28cc": {
+        "pulls": []
+      }
+    }
+    $
+
+After investigation, suppose you determine that `7555df9` indeed has no
+associated pull request, but `9b7fe88` ought to be associated with PR
+1862. You can create a file `$work/commit-pulls-overrides.json`, of the
+same format as `commit-pulls.json`, that specifies only the commits
+for which you want to override the pull list:
+
+    {
+      "9b7fe8803db1c8bb21ee47bd6691f0cd72ef28cc": {
+        "pulls": [1862]
+      }
+    }
+
+The keys in this object must exactly match the keys in the
+`commit-pulls.json` object; short hashes are not acceptable in
+`commit-pulls-overrides.json`, because `commit-pulls.json` doesn't use
+short hashes.
+
+## Fetching pull request and review data from GitHub
+
+Once you're satisfied with the pull request lists in
+`$work/commit-pulls.json` and any adjustments in
+`$work/commit-pulls-overrides.json`, you can run the `fetch-pulls.sh`
+script to retrieve data about the pull requests and their reviews from
+GitHub:
+
+    $ sh $scripts/fetch-pulls.sh
     
 ## Generating the mergers and approvers table
 
@@ -222,3 +338,18 @@ The columns here are:
 - author
 - reviewers who approved the pull request
 - person who merged the pull request
+
+You can import this file into Google Sheets using *File > Import*, and
+share it with your team to coordinate vetting work.
+
+There is a Google Sheets [template][t] you can copy, if that helps.
+You'll probably need to adjust some of the ranges to match the number
+of rows in your data.
+
+[t]: https://docs.google.com/spreadsheets/d/1R7gZonQf2lIXMkhnr-BuX8pvzEJtFqf1449icgKpX4w
+
+## Deleting generated files
+
+The script `cleanup.sh` deletes all files generated by these scripts.
+It leaves alone the files you created, like `commit-list` and
+`trusted.json`.

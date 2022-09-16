@@ -7,26 +7,16 @@ if ! [ -f commit-list ]; then
     exit 1
 fi
 
-source ./config.sh
+source ./repo.sh
 
-mkdir -p commits pulls reviews
-rm -f commits/* pulls/* reviews/*
+rm -f commits/* commit-pulls/*
+mkdir -p commits commit-pulls
 
 # Fetch the pull requests associated with each commit.
 for commit in $(cat commit-list); do
+    echo commit $commit
+    gh api "/repos/$owner/$repo/commits/$commit" | jq . > commits/$commit
     echo pulls for $commit
-    gh api "/repos/$owner/$repo/commits/$commit/pulls" | jq . > commits/$commit
-    sleep 0.1
-done
-
-# Extract PR numbers from each commit's list.
-pulls=$(jq '.[].number' commits/* | sort -nu)
-
-# Fetch data about each pull request, and the reviews associated with it.
-for pull in $pulls; do
-    echo pull $pull
-    gh api "/repos/$owner/$repo/pulls/$pull" | jq . > pulls/$pull
-    echo reviews for $pull
-    gh api "/repos/$owner/$repo/pulls/$pull/reviews" | jq . > reviews/$pull
+    gh api "/repos/$owner/$repo/commits/$commit/pulls" | jq . > commit-pulls/$commit
     sleep 0.1
 done
