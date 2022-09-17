@@ -191,9 +191,10 @@ ensure that anything like that happens reliably. So it's up to you to
 identify an appropriate range of commits, and check that its endpoints
 correspond to the crate texts actually published.
 
-You can retrieve the published source of a crate from a URL of the form:
+According to the [Cargo book][cb], you can retrieve the published
+source of a crate from a URL of the form:
 
-    https://static.crates.io/crates/{name}/{name}-{version}.crate
+    https://crates.io/api/v1/crates/{name}/{version}/download
     
 This gives you a gzipped tarball which you can unpack and compare to
 some specific git commit. What a pain. Note that publishing a crate
@@ -210,6 +211,8 @@ we could generate the `commit-list` file like this:
 
 The `-C` option just tells git to behave as if it were started in the
 given directory.
+
+[cb]: https://doc.rust-lang.org/nightly/cargo/reference/registries.html#index-format
 
 ## Fetching commit data from GitHub
 
