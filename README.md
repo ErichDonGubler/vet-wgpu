@@ -182,14 +182,14 @@ git commit SHAs, one per line. These commits must cover all the
 changes included in the version or delta you want to audit for `cargo
 vet`.
 
-Unfortunately, this list of commits can't be generated mechanically.
-We need a list of commits, but `cargo vet` operates in terms of crate
-versions - and there is no straightforward relationship between the
-two. If the crate's maintainers happen to tag the commit from which
-they published the crate, that's great, but there's no automation to
-ensure that anything like that happens reliably. So it's up to you to
-identify an appropriate range of commits, and check that its endpoints
-correspond to the crate texts actually published.
+Unfortunately, this list of commits can't be generated entirely
+mechanically. We need a list of commits, but `cargo vet` operates in
+terms of crate versions - and there is no straightforward relationship
+between the two. If the crate's maintainers happen to tag the commit
+from which they published the crate, that's great, but there's no
+automation to ensure that anything like that happens reliably. So it's
+up to you to identify an appropriate range of commits, and check that
+its endpoints correspond to the crate texts actually published.
 
 According to the [Cargo book][cb], you can retrieve the published
 source of a crate from a URL of the form:
@@ -197,11 +197,17 @@ source of a crate from a URL of the form:
     https://crates.io/api/v1/crates/{name}/{version}/download
     
 This gives you a gzipped tarball which you can unpack and compare to
-some specific git commit. What a pain. Note that publishing a crate
-adjusts its `Cargo.toml` file, so differences in that file are
-expected.
+some specific git commit. What a pain. I've used a command like this:
 
-In this example, assume that we have done the legwork necessary to
+    $ diff --recursive --unified --ignore-trailing-space \
+           --exclude Cargo.toml --exclude target \
+           $cargo_tarball/d3d12-0.5.0 $git_checkout/d3d12-rs
+
+Publishing a crate adjusts its `Cargo.toml` file, so differences in
+that file are expected. The `--ignore-trailing-space` flag is useful
+if the crate was published from a Windows machine.
+
+After all that, assume that we have done the legwork necessary to
 determine that want to audit commits reachable from `gfx-rs/v0.13`
 that are not reachable from `gfx-rs/v0.12`, which has already been
 audited. If `$source` is a git checkout of the project we're auditing,

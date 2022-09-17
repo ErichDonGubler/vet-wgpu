@@ -16,7 +16,9 @@ mkdir -p pulls reviews
 pulls=$(
     (
         jq '.[].number' commit-pulls/*
-        jq '.[] | .pulls[]' commit-pulls-overrides.json
+        if [ -f commit-pulls-overrides.json ]; then
+            jq '.[] | .pulls[]' commit-pulls-overrides.json
+        fi
     ) \
     | sort -nu
 )
