@@ -112,6 +112,12 @@ When the whole process is complete, we will have a tree like this:
 
 In this tree:
 
+- The `mergers-and-approvers.tsv` file is the final result, ready for
+  importing into Google Sheets. This is produced by
+  `mergers-and-approvers.sh`, the last step in the process.
+
+You create the following files yourself, as inputs to the process:
+
 - The `repo.sh` file indicates which GitHub repository we're working
   with.
 
@@ -127,7 +133,9 @@ In this tree:
   to the mapping from commits to pull requests. We explain why this
   might be necessary below.
 
-- The remaining `.json` files hold combined intermediate results used
+The following files and directories are created by the scripts:
+
+- The other `.json` files hold combined intermediate results used
   by the `mergers-and-approvers.sh` script.
 
 - The `commits`, `commit-pulls`, `pulls` and `reviews` subdirectories
@@ -137,9 +145,6 @@ In this tree:
   you can retrieve these once and then leave them alone, to keep
   GitHub from rate-limiting you.
 
-- The `mergers-and-approvers.tsv` file is the final result, ready for
-  importing into Google Sheets. This is produced by
-  `mergers-and-approvers.sh`.
 
 ## Creating the repository file
 
