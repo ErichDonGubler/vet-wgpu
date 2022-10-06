@@ -161,9 +161,9 @@ when it starts.
 
 ## Creating the trusted reviewers table
 
-The point of this exercise is to identify commits that we don't need
-to audit because they were either authored or reviewed by people we
-trust to apply the appropriate standards of review. The file
+The point of this whole process is to identify commits that we don't
+need to audit because they were either authored or reviewed by people
+we trust to apply the appropriate standards of review. The file
 `$work/trusted.json` identifies who these trusted people are.
 
 The file should contain a JSON object whose keys are the GitHub
@@ -213,7 +213,7 @@ that file are expected. The `--ignore-trailing-space` flag is useful
 if the crate was published from a Windows machine.
 
 After all that, assume that we have done the legwork necessary to
-determine that want to audit commits reachable from `gfx-rs/v0.13`
+determine that we want to audit commits reachable from `gfx-rs/v0.13`
 that are not reachable from `gfx-rs/v0.12`, which has already been
 audited. If `$source` is a git checkout of the project we're auditing,
 we could generate the `commit-list` file like this:
