@@ -218,7 +218,7 @@ that are not reachable from `gfx-rs/v0.12`, which has already been
 audited. If `$source` is a git checkout of the project we're auditing,
 we could generate the `commit-list` file like this:
 
-    $ git -C $source gfx-rs/v0.12..gfx-rs/v0.13 > $work/commit-list
+    $ git -C $source rev-list tags/v0.12..tags/v0.13.0 > $work/commit-list
 
 The `-C` option just tells git to behave as if it were started in the
 given directory.
