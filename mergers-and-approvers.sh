@@ -90,7 +90,8 @@ jq --slurpfile pulls pulls.json                         \
                          | $reviews[.].reviews[]
                          | select(.state == "APPROVED")
                          | .user.login
-                       ] | unique,
+                       ]
+                       | unique,
             mergers: [ $pull_numbers[] | tostring | $pulls[.].merged_by.login ] | unique,
           }
         | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | unique ))
