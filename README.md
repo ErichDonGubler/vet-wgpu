@@ -361,7 +361,7 @@ Once the data has been retrieved, run the `mergers-and-approvers.sh`
 script to write the `mergers-and-approvers.tsv` file, which can be
 imported into Google Sheets or something like that.
 
-    $ sh $scripts/mergers-and-approvers
+    $ sh $scripts/mergers-and-approvers.sh
     $ cat mergers-and-approvers.tsv 
     1933	e2d688088a8e900e22da348cdc7ba0655394b498	expenses	JCapucho	JCapucho	
     1989	27d38aae33fdbfa72197847038cb470720594cb1	teoxoy	jimblandy	jimblandy	jimblandy
@@ -402,4 +402,4 @@ interspersed.
     $ sh $scripts/fetch-commits.sh
     $ sh $scripts/make-commit-pulls.sh
     $ sh $scripts/fetch-pulls.sh
-    $ sh $scripts/mergers-and-approvers
+    $ sh $scripts/mergers-and-approvers.sh
