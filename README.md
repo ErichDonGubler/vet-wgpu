@@ -399,7 +399,11 @@ Even if you're familiar with the process, it's good to have a
 checklist that covers all the steps without all the explanation
 interspersed.
 
+    $ ... > repo.sh
+    $ ... > trusted.json
+    $ ... > commit-list
     $ sh $scripts/fetch-commits.sh
+    $ ... > commit-pulls-overrides.json
     $ sh $scripts/make-commit-pulls.sh
     $ sh $scripts/fetch-pulls.sh
     $ sh $scripts/mergers-and-approvers.sh
