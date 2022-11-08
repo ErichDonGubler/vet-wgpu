@@ -223,6 +223,33 @@ we could generate the `commit-list` file like this:
 The `-C` option just tells git to behave as if it were started in the
 given directory.
 
+Note that many projects make commits to both the main development
+branch and the release branch, like this:
+
+    3722636 * v0.8.0 Prepare v0.8.0 release
+    ffc26ac * Added missing whitespace to named_field and named_struct grammar (#378)
+    366c1d8 * Fixed serialization for floating point values less than EPSILON. (#372)
+    62db940 * Move option to emit struct names to `PrettyConfig` (#329)
+    4519973 * Fix some clippy warnings (#330)
+    b3bef7f | * v0.7.1 Bump version
+    e035468 | * Document deprecation in change log
+    5f48fe7 | * Update changelog for 0.7.1
+    607b6b4 | * Fixed serialization for floating point values less than EPSILON. (#372)
+    50da8b6 | * Move option to emit struct names to `PrettyConfig` (#329)
+    96a038c | * Fix some clippy warnings (#330)
+    e53b5dd | * Remove rust-toolchain file
+            |/
+    7aba9c2 * v0.7.0 Update CHANGELOG and bump to 0.7.0
+
+This shows two branches, `v0.8.0` and `v0.7.1`, with `v0.7.0` as their
+common ancestor. Note that three of the four commits made to the
+`v0.8.0` branch since `v0.7.0` are also present on the `v0.7.1`
+branch. If `v0.7.1` has already been vetted, then there is no need to
+re-examine the corresponding changesets in detail. However, it is
+necessary to verify that the vetted commits in `v0.7.1` are the same
+as their counterparts in `v0.8.0`, so the latter should still be
+included in `commit-list`.
+
 [cb]: https://doc.rust-lang.org/nightly/cargo/reference/registries.html#index-format
 
 ## Fetching commit data from GitHub
@@ -403,7 +430,7 @@ interspersed.
     $ ... > trusted.json
     $ ... > commit-list
     $ sh $scripts/fetch-commits.sh
-    $ ... > commit-pulls-overrides.json
     $ sh $scripts/make-commit-pulls.sh
+    $ ... > commit-pulls-overrides.json
     $ sh $scripts/fetch-pulls.sh
     $ sh $scripts/mergers-and-approvers.sh
