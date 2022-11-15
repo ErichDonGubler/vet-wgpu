@@ -85,7 +85,7 @@ jq --slurpfile pulls pulls.json                         \
         | {
             pull: ($pull_numbers[0] // "none"),
             $sha,
-            author: $commit.author.login,
+            author: ($commit.author.login // ($commit.commit.author.name + " (non-GitHub)")),
             approvers: [ $pull_numbers[] | tostring
                          | $reviews[.].reviews[]
                          | select(.state == "APPROVED")
