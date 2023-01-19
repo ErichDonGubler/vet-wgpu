@@ -60,8 +60,10 @@ fi
 # From among those parties, extract the set of trusted auditors who
 # played those roles, if any.
 #
-# Sort by pull request number, and print as tab-separated values
-jq --slurpfile pulls pulls.json                         \
+# Print as tab-separated values, preserving the commit order from commit-list.
+jq --raw-input                                          \
+   --slurpfile commits commits.json                     \
+   --slurpfile pulls pulls.json                         \
    --slurpfile reviews reviews.json                     \
    --slurpfile commit_pulls commit-pulls.json           \
    --slurpfile overrides commit-pulls-overrides.json    \
@@ -70,35 +72,31 @@ jq --slurpfile pulls pulls.json                         \
    '
     # --slurpfile wraps the file contents in an array,
     # which I always forget to look inside, so just take
-    # care of it up front.
-      $pulls[0] as $pulls
+    # care of doing that up front.
+      $commits[0] as $commits
+    | $pulls[0] as $pulls
     | $reviews[0] as $reviews
 
     # Multiplying objects in jq does exactly the kind
-    # of overriding we want.
+    # of overriding we want for commit-pulls-overrides.json.
     | ($commit_pulls[0] * $overrides[0]) as $commit_pulls
-
-    | to_entries
-    | map(
-        . as { key: $sha, value: $commit }
-        | ($commit_pulls[$sha].pulls) as $pull_numbers
-        | {
-            pull: ($pull_numbers[0] // "none"),
-            $sha,
-            author: ($commit.author.login // ($commit.commit.author.name + " (non-GitHub)")),
-            approvers: [ $pull_numbers[] | tostring
-                         | $reviews[.].reviews[]
-                         | select(.state == "APPROVED")
-                         | .user.login
-                       ]
-                       | unique,
-            mergers: [ $pull_numbers[] | tostring | $pulls[.].merged_by.login ] | unique,
-          }
-        | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | unique ))
-      )
-    | sort_by(.pull)[]
+    | $commits[.]
+    | ($commit_pulls[.sha].pulls) as $pull_numbers
+    | {
+        pull: ($pull_numbers[0] // "none"),
+        sha,
+        author: (.author.login // (.commit.author.name + " (non-GitHub)")),
+        approvers: [ $pull_numbers[] | tostring
+                     | $reviews[.].reviews[]
+                     | select(.state == "APPROVED")
+                     | .user.login
+                   ]
+                   | unique,
+        mergers: [ $pull_numbers[] | tostring | $pulls[.].merged_by.login ] | unique,
+      }
+    | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | unique ))
     | "\(.pull)\t\(.sha)\t\(.author)\t\(.approvers | join(","))\t\(.mergers | join(","))\t\(.vetters | join(","))"
    ' \
-   commits.json \
+   commit-list \
    > mergers-and-approvers.tsv
 

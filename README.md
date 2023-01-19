@@ -8,10 +8,9 @@ the organization's review standards.
 
 However, determining who reviewed and merged commits for projects
 developed on GitHub can take a lot of mouse clicks. This repo contains
-scripts for producing a table of commits, sorted by pull request, with
-author, reviewer, and committer names, suitable for uploading to
-Google Sheets, where it can be used by a team to coordinate vetting
-work.
+scripts for producing a table of commits with author, reviewer, and
+committer names, suitable for uploading to Google Sheets, where it can
+be used by a team to coordinate vetting work.
 
 ## Workflow overview
 
