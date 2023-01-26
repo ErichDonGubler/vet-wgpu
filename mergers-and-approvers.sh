@@ -61,7 +61,8 @@ fi
 # played those roles, if any.
 #
 # Print as tab-separated values, preserving the commit order from commit-list.
-jq --raw-input                                          \
+jq --raw-input . commit-list \
+| jq --slurp                                            \
    --slurpfile commits commits.json                     \
    --slurpfile pulls pulls.json                         \
    --slurpfile reviews reviews.json                     \
@@ -70,10 +71,15 @@ jq --raw-input                                          \
    --argjson trusted "$(cat trusted.json)"              \
    --raw-output                                         \
    '
+    # The commit list comes in from `jq --raw-input .` as a single
+    # array of strings, in reverse chronological order. We want to
+    # produce a stream of entries in chronological order, so reverse
+    # and unpack the array.
+    reverse | .[]
     # --slurpfile wraps the file contents in an array,
     # which I always forget to look inside, so just take
     # care of doing that up front.
-      $commits[0] as $commits
+    | $commits[0] as $commits
     | $pulls[0] as $pulls
     | $reviews[0] as $reviews
 
@@ -97,6 +103,5 @@ jq --raw-input                                          \
     | ( .vetters = ( [ .author, .mergers[], .approvers[] | select(in($trusted)) ] | unique ))
     | "\(.pull)\t\(.sha)\t\(.author)\t\(.approvers | join(","))\t\(.mergers | join(","))\t\(.vetters | join(","))"
    ' \
-   commit-list \
    > mergers-and-approvers.tsv
 
